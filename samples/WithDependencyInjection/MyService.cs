@@ -15,9 +15,6 @@
             var c2 = serializerOfT.Deserialize(bytes);
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            throw new NotImplementedException();
-        }
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) =>  throw new NotImplementedException();
     }
 }

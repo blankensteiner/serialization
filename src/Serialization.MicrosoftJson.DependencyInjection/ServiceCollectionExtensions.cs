@@ -21,7 +21,7 @@
 
             foreach (var serializerOfT in serializer.GetAllSerializers())
             {
-                services.AddSingleton(serializerOfT.GetType().GetInterfaces().First(), serializerOfT);
+                services.AddSingleton(serializerOfT.GetType().GetInterfaces().Single(), serializerOfT);
             }
         }
     }

@@ -18,7 +18,7 @@
 
         public SerializationBenchmarks()
         {
-            var builder = new SerializerBuilder(new System.Text.Json.JsonSerializerOptions());
+            var builder = new SerializerBuilder();
             builder.Type<ClosedClass>();
             _serializer = builder.Build();
             _serializerOfT = _serializer.GetSerializerFor<ClosedClass>();
