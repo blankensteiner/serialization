@@ -25,7 +25,7 @@ In short, we just don't want any constraints.
 ### Serialization abstractions
 
 Microsoft has done a great job in creating interfaces for [logging](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) and [dependency injection](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection.Abstractions/) and soon we will also have vendor-agnostic interfaces for metrics and tracing thanks to [OpenTelemetry](https://opentelemetry.io/).
-We feel that a similar standard is needed for serialization and therefore we have created Serialization.Abstraction, defining two interfaces. ISerializer for (de)serializing all types and ISerializer\<T\> for (de)serializing a specific type. There is a small performance improvement when using ISerializer\<T\>.
+We feel that a similar standard is needed for serialization and therefore we have created Serialization.Abstractions, defining two interfaces. ISerializer for (de)serializing all types and ISerializer\<T\> for (de)serializing a specific type. There is a small performance improvement when using ISerializer\<T\>.
 
 ### Version awareness
 
@@ -107,12 +107,12 @@ We are just getting started but currently, we have support for:
 - [X] Guid
 - [X] DateTime
 - [X] DateTimeOffset
+- [X] Nullable<>
 
 ## Roadmap
 
 Next we will look into supporting:
 
-- [ ] Nullable<>
 - [ ] Enum
 - [ ] Char
 - [ ] TimeSpan

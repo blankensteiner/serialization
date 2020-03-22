@@ -53,40 +53,94 @@
                 }
 
                 var propertyNameBytes = System.Text.Encoding.UTF8.GetBytes(mapping.PropertyName);
-                _dataKeyMap.Add(propertyNameBytes, CreateSetter(getterMethods[mapping.Field.FieldType], mapping.Field));
+                var fieldType = GetUnderlyingType(mapping.Field);
+                _dataKeyMap.Add(propertyNameBytes, CreateSetter(getterMethods[fieldType], mapping.Field));
                 fieldMap.Add(mapping.PropertyName, mapping.Field);
             }
 
             _serializer = CreateSerializer(fieldMap, writerMethods);
         }
 
+        private static Type GetUnderlyingType(FieldInfo field)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(field.FieldType);
+            if (underlyingType is null)
+                return field.FieldType;
+            return underlyingType;
+        }
+
         private static Setter CreateSetter(MethodInfo methodInfo, FieldInfo fieldInfo)
         {
-            var dm = new DynamicMethod("Set" + fieldInfo.Name, typeof(void), new Type[] { typeof(Utf8JsonReader).MakeByRefType(), typeof(TValue) });
+            var dm = new DynamicMethod(typeof(TValue).Name + "Set" + fieldInfo.Name, typeof(void), new Type[] { typeof(Utf8JsonReader).MakeByRefType(), typeof(TValue) });
             var il = dm.GetILGenerator();
+
             il.Emit(OpCodes.Ldarg_1);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Call, methodInfo);
+
+            var underlyingType = Nullable.GetUnderlyingType(fieldInfo.FieldType);
+            if (underlyingType != null)
+            {
+                var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
+                var constructor = nullableType.GetConstructor(new[] { underlyingType });
+                if (constructor is null)
+                    throw new MissingMemberException("Nullable<> constructor missing for " + underlyingType.FullName);
+                il.Emit(OpCodes.Newobj, constructor);
+            }
+
             il.Emit(OpCodes.Stfld, fieldInfo);
             il.Emit(OpCodes.Ret);
+
             return (Setter)dm.CreateDelegate(typeof(Setter));
         }
 
         private static Serializer CreateSerializer(Dictionary<string, FieldInfo> fieldMap, Dictionary<Type, MethodInfo> writerMethods)
         {
             var parameters = new[] { typeof(Utf8JsonWriter), typeof(TValue) };
-            var getter = new DynamicMethod("Getter", typeof(void), parameters, typeof(TValue), true);
+            var getter = new DynamicMethod(typeof(TValue).Name + "Serializer", typeof(void), parameters, typeof(TValue), true);
             var il = getter.GetILGenerator();
 
             foreach (var map in fieldMap)
             {
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, map.Key);
-                il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Ldfld, map.Value);
-                il.Emit(OpCodes.Callvirt, writerMethods[map.Value.FieldType]);
+                var underlyingType = Nullable.GetUnderlyingType(map.Value.FieldType);
+                if (underlyingType != null)
+                {
+                    var label = il.DefineLabel();
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Ldflda, map.Value);
+                    var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
+                    var hasValueProperty = nullableType.GetProperty("HasValue");
+                    if (hasValueProperty is null)
+                        throw new MissingMemberException("Missing 'HashValue' property on Nullable<>");
+                    var hasValueMethod = hasValueProperty.GetGetMethod();
+                    if (hasValueMethod is null)
+                        throw new MissingMemberException("Missing getter for 'HashValue' property on Nullable<>");
+                    il.Emit(OpCodes.Call, hasValueMethod);
+                    il.Emit(OpCodes.Brfalse, label);
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldstr, map.Key);
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Ldflda, map.Value);
+                    var valueProperty = nullableType.GetProperty("Value");
+                    if (valueProperty is null)
+                        throw new MissingMemberException("Missing 'Value' property on Nullable<>");
+                    var getValueMethod = valueProperty.GetGetMethod();
+                    if (getValueMethod is null)
+                        throw new MissingMemberException("Missing getter for 'Value' property on Nullable<>");
+                    il.Emit(OpCodes.Call, getValueMethod);
+                    il.Emit(OpCodes.Callvirt, writerMethods[underlyingType]);
+                    il.MarkLabel(label);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldstr, map.Key);
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Ldfld, map.Value);
+                    il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
+                }
             }
-
+            
             il.Emit(OpCodes.Ret);
             return (Serializer)getter.CreateDelegate(typeof(Serializer));
         }
@@ -113,8 +167,9 @@
                         if (found)
                         {
                             reader.Read();
-                            if (reader.TokenType == JsonTokenType.Null && _serializerOptions.IgnoreNullValues)
+                            if (reader.TokenType == JsonTokenType.Null)
                                 continue;
+
                             setter(ref reader, value);
                         }
                         break;
