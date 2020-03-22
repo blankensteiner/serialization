@@ -5,6 +5,7 @@
     using System.Buffers;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Runtime.Serialization;
@@ -64,8 +65,13 @@
         private static Type GetUnderlyingType(FieldInfo field)
         {
             var underlyingType = Nullable.GetUnderlyingType(field.FieldType);
+
             if (underlyingType is null)
-                return field.FieldType;
+                underlyingType = field.FieldType;
+
+            if (underlyingType.BaseType != null && underlyingType.BaseType.Equals(typeof(Enum)))
+                underlyingType = underlyingType.GetFields(BindingFlags.Instance | BindingFlags.Public).Single().FieldType;
+
             return underlyingType;
         }
 

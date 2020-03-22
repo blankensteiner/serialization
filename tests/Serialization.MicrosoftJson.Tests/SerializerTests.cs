@@ -32,7 +32,7 @@ namespace Serialization.MicrosoftJson.Tests
 
             var expected = new ClosedClass<byte>(byte.MaxValue); // Arrange
             var bytes = _serializer.Serialize(expected);         // Act
-            GetByte(bytes, "Value").Should().Be(expected.Value); // Assert
+            GetInt8(bytes, "Value").Should().Be(expected.Value); // Assert
         }
 
         [Fact]
@@ -41,7 +41,7 @@ namespace Serialization.MicrosoftJson.Tests
 
             var expected = new ClosedClass<sbyte>(sbyte.MaxValue); // Arrange
             var bytes = _serializer.Serialize(expected);           // Act
-            GetSByte(bytes, "Value").Should().Be(expected.Value);  // Assert
+            GetUInt8(bytes, "Value").Should().Be(expected.Value);  // Assert
         }
 
         [Fact]
@@ -177,6 +177,70 @@ namespace Serialization.MicrosoftJson.Tests
             var expected = new ClosedClass<int?>(null);        // Arrange
             var bytes = _serializer.Serialize(expected);       // Act
             PropertyExists(bytes, "Value").Should().BeFalse(); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsByteEnum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<Int8Enum>(Int8Enum.Max);    // Arrange
+            var bytes = _serializer.Serialize(expected);               // Act
+            GetInt8(bytes, "Value").Should().Be((byte)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsSByteEnum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<UInt8Enum>(UInt8Enum.Max);    // Arrange
+            var bytes = _serializer.Serialize(expected);                 // Act
+            GetUInt8(bytes, "Value").Should().Be((sbyte)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsInt16Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<Int16Enum>(Int16Enum.Max);    // Arrange
+            var bytes = _serializer.Serialize(expected);                 // Act
+            GetInt16(bytes, "Value").Should().Be((short)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsUInt16Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<UInt16Enum>(UInt16Enum.Max);    // Arrange
+            var bytes = _serializer.Serialize(expected);                   // Act
+            GetUInt16(bytes, "Value").Should().Be((ushort)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsInt32Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<Int32Enum>(Int32Enum.Max);  // Arrange
+            var bytes = _serializer.Serialize(expected);               // Act
+            GetInt32(bytes, "Value").Should().Be((int)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsUInt32Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<UInt32Enum>(UInt32Enum.Max);  // Arrange
+            var bytes = _serializer.Serialize(expected);                 // Act
+            GetUInt32(bytes, "Value").Should().Be((uint)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsInt64Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<Int64Enum>(Int64Enum.Max);   // Arrange
+            var bytes = _serializer.Serialize(expected);                // Act
+            GetInt64(bytes, "Value").Should().Be((long)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsUInt64Enum_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<UInt64Enum>(UInt64Enum.Max);   // Arrange
+            var bytes = _serializer.Serialize(expected);                  // Act
+            GetUInt64(bytes, "Value").Should().Be((ulong)expected.Value); // Assert
         }
 
         [Fact]
@@ -329,6 +393,70 @@ namespace Serialization.MicrosoftJson.Tests
             var expected = new OpenClass<DateTimeOffset>(DateTimeOffset.MaxValue); // Arrange
             var actual = Deserialize(expected);                                    // Act
             actual.Value.Should().Be(expected.Value);                              // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsByteEnum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<Int8Enum>(Int8Enum.Max); // Arrange
+            var actual = Deserialize(expected);                   // Act
+            actual.Value.Should().Be((byte)expected.Value);       // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsSByteEnum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<UInt8Enum>(UInt8Enum.Max); // Arrange
+            var actual = Deserialize(expected);                     // Act
+            actual.Value.Should().Be((sbyte)expected.Value);        // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsInt16Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<Int16Enum>(Int16Enum.Max); // Arrange
+            var actual = Deserialize(expected);                     // Act
+            actual.Value.Should().Be((short)expected.Value);         // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsUInt16Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<UInt16Enum>(UInt16Enum.Max); // Arrange
+            var actual = Deserialize(expected);                       // Act
+            actual.Value.Should().Be((ushort)expected.Value);         // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsInt32Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<Int32Enum>(Int32Enum.Max); // Arrange
+            var actual = Deserialize(expected);                     // Act
+            actual.Value.Should().Be((int)expected.Value);          // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsUInt32Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<UInt32Enum>(UInt32Enum.Max); // Arrange
+            var actual = Deserialize(expected);                       // Act
+            actual.Value.Should().Be((uint)expected.Value);           // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsInt64Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<Int64Enum>(Int64Enum.Max); // Arrange
+            var actual = Deserialize(expected);                     // Act
+            actual.Value.Should().Be((long)expected.Value);         // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenValueIsUInt64Enum_ShouldDeserializeValue()
+        {
+            var expected = new OpenClass<UInt64Enum>(UInt64Enum.Max); // Arrange
+            var actual = Deserialize(expected);                       // Act
+            actual.Value.Should().Be((ulong) expected.Value);         // Assert
         }
     }
 }

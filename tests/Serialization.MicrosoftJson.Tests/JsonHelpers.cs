@@ -19,13 +19,13 @@
             return GetProperty(jsonDocument, propertyName).GetBoolean();
         }
 
-        public static byte GetByte(byte[] bytes, string propertyName)
+        public static byte GetInt8(byte[] bytes, string propertyName)
         {
             using var jsonDocument = JsonDocument.Parse(bytes);
             return GetProperty(jsonDocument, propertyName).GetByte();
         }
 
-        public static sbyte GetSByte(byte[] bytes, string propertyName)
+        public static sbyte GetUInt8(byte[] bytes, string propertyName)
         {
             using var jsonDocument = JsonDocument.Parse(bytes);
             return GetProperty(jsonDocument, propertyName).GetSByte();
