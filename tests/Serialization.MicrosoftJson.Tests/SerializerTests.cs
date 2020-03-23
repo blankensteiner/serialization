@@ -126,7 +126,16 @@ namespace Serialization.MicrosoftJson.Tests
         }
 
         [Fact]
-        public void Serialize_WhenValueIsString_ShouldSerializeValue()
+        public void Serialize_WhenValueIsStringAndNull_ShouldNotSerializeValue()
+        {
+
+            var expected = new ClosedClass<string?>(null);     // Arrange
+            var bytes = _serializer.Serialize(expected);       // Act
+            PropertyExists(bytes, "Value").Should().BeFalse(); // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsStringAndSet_ShouldSerializeValue()
         {
 
             var expected = new ClosedClass<string>("test");        // Arrange
@@ -159,6 +168,24 @@ namespace Serialization.MicrosoftJson.Tests
             var expected = new ClosedClass<DateTimeOffset>(DateTimeOffset.MaxValue); // Arrange
             var bytes = _serializer.Serialize(expected);                             // Act
             GetDateTimeOffset(bytes, "Value").Should().Be(expected.Value);           // Assert
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsNullableEnumAndSet_ShouldSerializeValue()
+        {
+
+            var expected = new ClosedClass<Int8Enum?>(Int8Enum.Max); // Arrange
+            var bytes = _serializer.Serialize(expected);             // Act
+            GetInt8(bytes, "Value").Should().Be((byte)Int8Enum.Max); // Assert. Use Int8Enum.Max to avoid null ref warning
+        }
+
+        [Fact]
+        public void Serialize_WhenValueIsNullableEnumAndNull_ShouldNotSerializeValue()
+        {
+
+            var expected = new ClosedClass<Int8Enum?>(null);   // Arrange
+            var bytes = _serializer.Serialize(expected);       // Act
+            PropertyExists(bytes, "Value").Should().BeFalse(); // Assert
         }
 
         [Fact]
@@ -241,6 +268,30 @@ namespace Serialization.MicrosoftJson.Tests
             var expected = new ClosedClass<UInt64Enum>(UInt64Enum.Max);   // Arrange
             var bytes = _serializer.Serialize(expected);                  // Act
             GetUInt64(bytes, "Value").Should().Be((ulong)expected.Value); // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenNullableIsEnumAndMissing_ShouldSetValueToNull()
+        {
+            var bytes = Encoding.UTF8.GetBytes("{}");                            // Arrange
+            var actual = _serializer.Deserialize<ClosedClass<Int8Enum?>>(bytes); // Act
+            actual.Value.Should().BeNull();                                      // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenNullableIsEnumAndNull_ShouldSetValueToNull()
+        {
+            var bytes = Encoding.UTF8.GetBytes("{\"Value\": null}");             // Arrange
+            var actual = _serializer.Deserialize<ClosedClass<Int8Enum?>>(bytes); // Act
+            actual.Value.Should().BeNull();                                      // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenNullableIsEnumAndSet_ShouldSetValue()
+        {
+            var bytes = Encoding.UTF8.GetBytes("{\"Value\": 255}");              // Arrange
+            var actual = _serializer.Deserialize<ClosedClass<Int8Enum?>>(bytes); // Act
+            actual.Value.Should().Be(255);                                       // Assert
         }
 
         [Fact]

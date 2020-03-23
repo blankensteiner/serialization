@@ -111,7 +111,7 @@
                 var underlyingType = Nullable.GetUnderlyingType(map.Value.FieldType);
                 if (underlyingType != null)
                 {
-                    var label = il.DefineLabel();
+                    var skipIfNullableIsNull = il.DefineLabel();
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldflda, map.Value);
                     var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
@@ -122,7 +122,7 @@
                     if (hasValueMethod is null)
                         throw new MissingMemberException("Missing getter for 'HashValue' property on Nullable<>");
                     il.Emit(OpCodes.Call, hasValueMethod);
-                    il.Emit(OpCodes.Brfalse, label);
+                    il.Emit(OpCodes.Brfalse, skipIfNullableIsNull);
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldstr, map.Key);
                     il.Emit(OpCodes.Ldarg_1);
@@ -134,16 +134,27 @@
                     if (getValueMethod is null)
                         throw new MissingMemberException("Missing getter for 'Value' property on Nullable<>");
                     il.Emit(OpCodes.Call, getValueMethod);
-                    il.Emit(OpCodes.Callvirt, writerMethods[underlyingType]);
-                    il.MarkLabel(label);
+                    il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
+                    il.MarkLabel(skipIfNullableIsNull);
                 }
                 else
                 {
+                    var skipIfClassAndNull = il.DefineLabel();
+                    if (map.Value.FieldType.IsClass)
+                    {
+                        il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Ldfld, map.Value);
+                        il.Emit(OpCodes.Brfalse_S, skipIfClassAndNull);
+                    }
+
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldstr, map.Key);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldfld, map.Value);
                     il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
+
+                    if (map.Value.FieldType.IsClass)
+                        il.MarkLabel(skipIfClassAndNull);
                 }
             }
             

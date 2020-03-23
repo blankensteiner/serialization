@@ -108,12 +108,12 @@ We are just getting started but currently, we have support for:
 - [X] DateTime
 - [X] DateTimeOffset
 - [X] Nullable<>
+- [X] Enum
 
 ## Roadmap
 
 Next we will look into supporting:
 
-- [ ] Enum
 - [ ] Char
 - [ ] TimeSpan
 - [ ] Uri
