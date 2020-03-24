@@ -5,7 +5,7 @@
     using System.Buffers;
     using System.Collections.Generic;
 
-    public sealed class ByteArrayKeyDictionary<T>
+    public sealed class ByteArrayKeyDictionary<T> where T : class
     {
         private readonly Dictionary<long, List<KeyValue>> _keyValues;
         private readonly KeyGenerator _keyGenerator;
@@ -28,7 +28,7 @@
                 _keyValues[generatedKey] = new List<KeyValue> { keyValue };
         }
 
-        public bool TryGetValue(ReadOnlySpan<byte> key, out T value)
+        public T? GetValue(ReadOnlySpan<byte> key)
         {
             var generatedKey = _keyGenerator.Generate(key);
 
@@ -39,17 +39,15 @@
                     var keyValue = keyValues[i];
                     if (key.SequenceEqual(keyValue.Key))
                     {
-                        value = keyValue.Value;
-                        return true;
+                        return keyValue.Value;
                     }
                 }
             }
 
-            value = default;
-            return false;
+            return null;
         }
 
-        public bool TryGetValue(ReadOnlySequence<byte> key, out T value)
+        public T? GetValue(ReadOnlySequence<byte> key)
         {
             var generatedKey = _keyGenerator.Generate(key);
 
@@ -60,14 +58,12 @@
                     var keyValue = keyValues[i];
                     if (key.SequenceEqual(keyValue.Key))
                     {
-                        value = keyValue.Value;
-                        return true;
+                        return keyValue.Value;
                     }
                 }
             }
 
-            value = default;
-            return false;
+            return null;
         }
 
         private sealed class KeyValue

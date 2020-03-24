@@ -15,7 +15,13 @@ namespace Serialization.MicrosoftJson.Tests
         public SerializerTests(Fixture fixture) => _serializer = fixture.Serializer;
 
         private ClosedClass<TValue> Deserialize<TValue>(OpenClass<TValue> openClass)
-            => _serializer.Deserialize<ClosedClass<TValue>>(JsonSerializer.SerializeToUtf8Bytes(openClass));
+            => Deserialize<TValue>(JsonSerializer.SerializeToUtf8Bytes(openClass));
+
+        private ClosedClass<TValue> Deserialize<TValue>(string json)
+            => Deserialize<TValue>(Encoding.UTF8.GetBytes(json));
+
+        private ClosedClass<TValue> Deserialize<TValue>(byte[] bytes)
+            => _serializer.Deserialize<ClosedClass<TValue>>(bytes);
 
         [Fact]
         public void Serialize_WhenValueIsBoolean_ShouldSerializeValue()
@@ -508,6 +514,54 @@ namespace Serialization.MicrosoftJson.Tests
             var expected = new OpenClass<UInt64Enum>(UInt64Enum.Max); // Arrange
             var actual = Deserialize(expected);                       // Act
             actual.Value.Should().Be((ulong) expected.Value);         // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownNull_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                                  // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": null, \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                                 // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownBoolean_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                                  // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": true, \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                                 // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownNumber_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                               // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": 9, \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                              // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownString_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                                      // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": \"test\", \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                                     // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownObject_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                                // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": {}, \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                               // Assert
+        }
+
+        [Fact]
+        public void Deserialize_WhenParsingUnknownArray_ShouldIgnoreIt()
+        {
+            const int expected = int.MaxValue;                                                // Arrange
+            var actual = Deserialize<int>("{\"Unknown\": [], \"Value\": " + expected + " }"); // Act
+            actual.Value.Should().Be(expected);                                               // Assert
         }
     }
 }

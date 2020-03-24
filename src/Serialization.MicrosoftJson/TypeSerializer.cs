@@ -17,7 +17,7 @@
         private readonly JsonSerializerOptions _serializerOptions;
         private readonly JsonWriterOptions _writerOptions;
         private readonly JsonReaderOptions _readerOptions;
-        private readonly ByteArrayKeyDictionary<Setter> _dataKeyMap;
+        private readonly ByteArrayKeyDictionary<Setter> _setters;
         private readonly Serializer _serializer;
 
         private delegate void Setter(ref Utf8JsonReader reader, TValue value);
@@ -36,7 +36,7 @@
             _writerOptions = writerOptions;
             _readerOptions = readerOptions;
 
-            _dataKeyMap = new ByteArrayKeyDictionary<Setter>();
+            _setters = new ByteArrayKeyDictionary<Setter>();
             var fieldMap = new Dictionary<string, FieldInfo>();
 
             foreach (var mapping in configuration.Mappings)
@@ -55,7 +55,7 @@
 
                 var propertyNameBytes = System.Text.Encoding.UTF8.GetBytes(mapping.PropertyName);
                 var fieldType = GetUnderlyingType(mapping.Field);
-                _dataKeyMap.Add(propertyNameBytes, CreateSetter(getterMethods[fieldType], mapping.Field));
+                _setters.Add(propertyNameBytes, CreateSetter(getterMethods[fieldType], mapping.Field));
                 fieldMap.Add(mapping.PropertyName, mapping.Field);
             }
 
@@ -157,7 +157,7 @@
                         il.MarkLabel(skipIfClassAndNull);
                 }
             }
-            
+
             il.Emit(OpCodes.Ret);
             return (Serializer)getter.CreateDelegate(typeof(Serializer));
         }
@@ -170,29 +170,23 @@
 
             while (reader.Read())
             {
-                switch (reader.TokenType)
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                    continue;
+                
+                var setter = reader.HasValueSequence ? _setters.GetValue(reader.ValueSequence) : _setters.GetValue(reader.ValueSpan);
+                if (setter is null)
                 {
-                    case JsonTokenType.PropertyName:
-                        Setter setter;
-                        bool found = false;
-
-                        if (reader.HasValueSequence)
-                            found = _dataKeyMap.TryGetValue(reader.ValueSequence, out setter);
-                        else
-                            found = _dataKeyMap.TryGetValue(reader.ValueSpan, out setter);
-
-                        if (found)
-                        {
-                            reader.Read();
-                            if (reader.TokenType == JsonTokenType.Null)
-                                continue;
-
-                            setter(ref reader, value);
-                        }
-                        break;
+                    reader.Skip();
+                    continue;
                 }
-            }
 
+                reader.Read();
+
+                if (reader.TokenType == JsonTokenType.Null)
+                   continue;
+
+                setter(ref reader, value);
+            }
             return value;
         }
 
