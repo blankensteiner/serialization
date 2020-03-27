@@ -19,7 +19,7 @@
         public SerializationBenchmarks()
         {
             var builder = new SerializerBuilder();
-            builder.Type<ClosedClass>();
+            builder.AddType<ClosedClass>();
             _serializer = builder.Build();
             _serializerOfT = _serializer.GetSerializerFor<ClosedClass>();
 

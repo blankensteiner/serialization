@@ -19,7 +19,7 @@
             _typeConfigurations = new List<TypeConfiguration>();
         }
 
-        public ITypeBuilder<TValue> Type<TValue>(int version = 0, bool fallback = true)
+        public ITypeBuilder<TValue> AddType<TValue>(int version = 0, bool fallback = true)
         {
             var typeConfiguration = new TypeConfiguration(typeof(TValue), version, fallback);
             _typeConfigurations.Add(typeConfiguration);
@@ -134,7 +134,7 @@
             AddWriterMethod("WriteNumber", typeof(float));
             AddWriterMethod("WriteNumber", typeof(double));
             AddWriterMethod("WriteNumber", typeof(decimal));
-
+            
             return writerMehods;
         }
     }

@@ -2,6 +2,6 @@
 {
     public interface ISerializerBuilder
     {
-        ITypeBuilder<TValue> Type<TValue>(int version = 0, bool fallback = true);
+        ITypeBuilder<TValue> AddType<TValue>(int version = 0, bool fallback = true);
     }
 }

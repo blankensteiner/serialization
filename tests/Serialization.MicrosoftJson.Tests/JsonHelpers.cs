@@ -1,6 +1,5 @@
 ﻿namespace Serialization.MicrosoftJson.Tests
 {
-    using FluentAssertions;
     using System;
     using System.Text.Json;
 
@@ -8,9 +7,12 @@
     {
         private static JsonElement GetProperty(JsonDocument jsonDocument, string propertyName)
         {
-            var property = jsonDocument.RootElement.GetProperty(propertyName);
-            property.Should().NotBeNull();
-            return property;
+            var element = jsonDocument.RootElement;
+            foreach (var name in propertyName.Split('.'))
+            {
+                element = element.GetProperty(name);
+            }
+            return element;
         }
 
         public static bool GetBoolean(byte[] bytes, string propertyName)

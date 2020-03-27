@@ -51,7 +51,7 @@ Let start with building an ISerializer.
 
 ```csharp
 var builder = new SerializerBuilder();
-builder.Type<ClosedClass>();
+builder.AddType<ClosedClass>();
 var serializer = builder.Build();
 ```
 
@@ -71,7 +71,7 @@ await Host.CreateDefaultBuilder(args)
     {
         services.AddSerialization((options, builder) =>
         {
-            builder.Type<ClosedClass>();
+            builder.AddType<ClosedClass>();
         });
         services.AddHostedService<MyService>();
     })

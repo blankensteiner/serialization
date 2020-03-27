@@ -5,7 +5,6 @@
     using System.Buffers;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Runtime.Serialization;
@@ -69,8 +68,8 @@
             if (underlyingType is null)
                 underlyingType = field.FieldType;
 
-            if (underlyingType.BaseType != null && underlyingType.BaseType.Equals(typeof(Enum)))
-                underlyingType = underlyingType.GetFields(BindingFlags.Instance | BindingFlags.Public).Single().FieldType;
+            if (underlyingType.IsEnum)
+                underlyingType = Enum.GetUnderlyingType(underlyingType);
 
             return underlyingType;
         }
@@ -105,6 +104,8 @@
             var parameters = new[] { typeof(Utf8JsonWriter), typeof(TValue) };
             var getter = new DynamicMethod(typeof(TValue).Name + "Serializer", typeof(void), parameters, typeof(TValue), true);
             var il = getter.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, typeof(Utf8JsonWriter).GetMethod("WriteStartObject", Type.EmptyTypes));
 
             foreach (var map in fieldMap)
             {
@@ -117,10 +118,10 @@
                     var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
                     var hasValueProperty = nullableType.GetProperty("HasValue");
                     if (hasValueProperty is null)
-                        throw new MissingMemberException("Missing 'HashValue' property on Nullable<>");
+                        throw new MissingMemberException("Missing 'HasValue' property on Nullable<>");
                     var hasValueMethod = hasValueProperty.GetGetMethod();
                     if (hasValueMethod is null)
-                        throw new MissingMemberException("Missing getter for 'HashValue' property on Nullable<>");
+                        throw new MissingMemberException("Missing getter for 'HasValue' property on Nullable<>");
                     il.Emit(OpCodes.Call, hasValueMethod);
                     il.Emit(OpCodes.Brfalse, skipIfNullableIsNull);
                     il.Emit(OpCodes.Ldarg_0);
@@ -140,7 +141,9 @@
                 else
                 {
                     var skipIfClassAndNull = il.DefineLabel();
-                    if (map.Value.FieldType.IsClass)
+                    var isClass = map.Value.FieldType.IsClass;
+
+                    if (isClass)
                     {
                         il.Emit(OpCodes.Ldarg_1);
                         il.Emit(OpCodes.Ldfld, map.Value);
@@ -153,11 +156,13 @@
                     il.Emit(OpCodes.Ldfld, map.Value);
                     il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
 
-                    if (map.Value.FieldType.IsClass)
+                    if (isClass)
                         il.MarkLabel(skipIfClassAndNull);
                 }
             }
 
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, typeof(Utf8JsonWriter).GetMethod("WriteEndObject"));
             il.Emit(OpCodes.Ret);
             return (Serializer)getter.CreateDelegate(typeof(Serializer));
         }
@@ -187,6 +192,7 @@
 
                 setter(ref reader, value);
             }
+
             return value;
         }
 
@@ -195,9 +201,7 @@
             using var bufferWriter = new PooledByteBufferWriter(_serializerOptions.DefaultBufferSize);
             using (var writer = new Utf8JsonWriter(bufferWriter))
             {
-                writer.WriteStartObject();
                 _serializer(writer, value);
-                writer.WriteEndObject();
             }
             return bufferWriter.WrittenMemory.ToArray();
         }

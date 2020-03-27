@@ -275,7 +275,15 @@ namespace Serialization.MicrosoftJson.Tests
             var bytes = _serializer.Serialize(expected);                  // Act
             GetUInt64(bytes, "Value").Should().Be((ulong)expected.Value); // Assert
         }
-
+        /*
+        [Fact]
+        public void Serialize_WhenValueIsNestedClass_ShouldSerializeValue()
+        {
+            var expected = new ClosedClass<ClosedClass<int>>(new ClosedClass<int>(int.MaxValue)); // Arrange
+            var bytes = _serializer.Serialize(expected);                                          // Act
+            GetInt32(bytes, "Value.Value").Should().Be(expected.Value.Value);                     // Assert
+        }
+        */
         [Fact]
         public void Deserialize_WhenNullableIsEnumAndMissing_ShouldSetValueToNull()
         {

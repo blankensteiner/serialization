@@ -14,7 +14,7 @@
                 {
                     services.AddSerialization((options, builder) =>
                     {
-                        builder.Type<ClosedClass>();
+                        builder.AddType<ClosedClass>();
                     });
 
                     services.AddHostedService<MyService>();
