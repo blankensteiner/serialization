@@ -143,12 +143,12 @@ namespace Serialization.MicrosoftJson
 
                 int newSize = currentLength + growBy;
 
-                if ((uint)newSize > int.MaxValue)
+                if ((uint) newSize > int.MaxValue)
                 {
                     newSize = currentLength + sizeHint;
-                    if ((uint)newSize > int.MaxValue)
+                    if ((uint) newSize > int.MaxValue)
                     {
-                        newSize = int.MaxValue;
+                        throw new OutOfMemoryException($"Maximum buffer size of {newSize} exceeded");
                     }
                 }
 
