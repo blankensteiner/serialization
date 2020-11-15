@@ -1,6 +1,8 @@
 ﻿namespace Serialization.MicrosoftJson
 {
     using Serialization.Abstractions;
+    using Serialization.MicrosoftJson.Abstractions;
+    using Serialization.MicrosoftJson.Extensions;
     using System;
     using System.Buffers;
     using System.Collections.Generic;
@@ -10,7 +12,7 @@
     using System.Runtime.Serialization;
     using System.Text.Json;
 
-    public sealed class TypeSerializer<TValue> : ISerializer<TValue>
+    public sealed class TypeSerializer<TValue> : ISerializer<TValue>, ITypeSerializer<TValue>
     {
         private readonly Type _type;
         private readonly JsonSerializerOptions _serializerOptions;
@@ -76,7 +78,9 @@
 
         private static Setter CreateSetter(MethodInfo methodInfo, FieldInfo fieldInfo)
         {
-            var dm = new DynamicMethod(typeof(TValue).Name + "Set" + fieldInfo.Name, typeof(void), new Type[] { typeof(Utf8JsonReader).MakeByRefType(), typeof(TValue) });
+            var valueType = typeof(TValue);
+            var parameterTypes = new Type[] { typeof(Utf8JsonReader).MakeByRefType(), valueType };
+            var dm = new DynamicMethod(valueType.Name + "Set" + fieldInfo.Name, typeof(void), parameterTypes);
             var il = dm.GetILGenerator();
 
             il.Emit(OpCodes.Ldarg_1);
@@ -87,10 +91,7 @@
             if (underlyingType != null)
             {
                 var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
-                var constructor = nullableType.GetConstructor(new[] { underlyingType });
-                if (constructor is null)
-                    throw new MissingMemberException("Nullable<> constructor missing for " + underlyingType.FullName);
-                il.Emit(OpCodes.Newobj, constructor);
+                il.Emit(OpCodes.Newobj, nullableType.GetRequiredConstructor(new[] { underlyingType }));
             }
 
             il.Emit(OpCodes.Stfld, fieldInfo);
@@ -101,11 +102,15 @@
 
         private static Serializer CreateSerializer(Dictionary<string, FieldInfo> fieldMap, Dictionary<Type, MethodInfo> writerMethods)
         {
-            var parameters = new[] { typeof(Utf8JsonWriter), typeof(TValue) };
-            var getter = new DynamicMethod(typeof(TValue).Name + "Serializer", typeof(void), parameters, typeof(TValue), true);
+            var writerType = typeof(Utf8JsonWriter);
+            var valueType = typeof(TValue);
+
+            var parameterTypes = new[] { writerType, valueType };
+            var getter = new DynamicMethod(valueType.Name + "Serializer", typeof(void), parameterTypes, valueType, true);
             var il = getter.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Callvirt, typeof(Utf8JsonWriter).GetMethod("WriteStartObject", Type.EmptyTypes));
+
+            il.Emit(OpCodes.Callvirt, writerType.GetRequiredMethod("WriteStartObject"));
 
             foreach (var map in fieldMap)
             {
@@ -116,25 +121,15 @@
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldflda, map.Value);
                     var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
-                    var hasValueProperty = nullableType.GetProperty("HasValue");
-                    if (hasValueProperty is null)
-                        throw new MissingMemberException("Missing 'HasValue' property on Nullable<>");
-                    var hasValueMethod = hasValueProperty.GetGetMethod();
-                    if (hasValueMethod is null)
-                        throw new MissingMemberException("Missing getter for 'HasValue' property on Nullable<>");
-                    il.Emit(OpCodes.Call, hasValueMethod);
+                    var hasValueProperty = nullableType.GetRequiredProperty("HasValue");
+                    il.Emit(OpCodes.Call, hasValueProperty.GetRequiredGetMethod());
                     il.Emit(OpCodes.Brfalse, skipIfNullableIsNull);
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldstr, map.Key);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldflda, map.Value);
-                    var valueProperty = nullableType.GetProperty("Value");
-                    if (valueProperty is null)
-                        throw new MissingMemberException("Missing 'Value' property on Nullable<>");
-                    var getValueMethod = valueProperty.GetGetMethod();
-                    if (getValueMethod is null)
-                        throw new MissingMemberException("Missing getter for 'Value' property on Nullable<>");
-                    il.Emit(OpCodes.Call, getValueMethod);
+                    var valueProperty = nullableType.GetRequiredProperty("Value");
+                    il.Emit(OpCodes.Call, valueProperty.GetRequiredGetMethod());
                     il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
                     il.MarkLabel(skipIfNullableIsNull);
                 }
@@ -162,22 +157,21 @@
             }
 
             il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Callvirt, typeof(Utf8JsonWriter).GetMethod("WriteEndObject"));
+
+            il.Emit(OpCodes.Callvirt, writerType.GetRequiredMethod("WriteEndObject"));
             il.Emit(OpCodes.Ret);
             return (Serializer)getter.CreateDelegate(typeof(Serializer));
         }
 
-        public TValue Deserialize(byte[] data)
+        public TValue Deserialize(ref Utf8JsonReader reader)
         {
-            var value = (TValue)FormatterServices.GetUninitializedObject(_type);
-
-            var reader = new Utf8JsonReader(data, _readerOptions);
+            var value = (TValue) FormatterServices.GetUninitializedObject(_type);
 
             while (reader.Read())
             {
                 if (reader.TokenType != JsonTokenType.PropertyName)
                     continue;
-                
+
                 var setter = reader.HasValueSequence ? _setters.GetValue(reader.ValueSequence) : _setters.GetValue(reader.ValueSpan);
                 if (setter is null)
                 {
@@ -188,7 +182,7 @@
                 reader.Read();
 
                 if (reader.TokenType == JsonTokenType.Null)
-                   continue;
+                    continue;
 
                 setter(ref reader, value);
             }
@@ -196,12 +190,20 @@
             return value;
         }
 
+        public void Serialize(Utf8JsonWriter writer, TValue value) => _serializer(writer, value);
+
+        public TValue Deserialize(byte[] data)
+        {
+            var reader = new Utf8JsonReader(data, _readerOptions);
+            return Deserialize(ref reader);
+        }
+
         public byte[] Serialize(TValue value)
         {
             using var bufferWriter = new PooledByteBufferWriter(_serializerOptions.DefaultBufferSize);
             using (var writer = new Utf8JsonWriter(bufferWriter))
             {
-                _serializer(writer, value);
+                Serialize(writer, value);
             }
             return bufferWriter.WrittenMemory.ToArray();
         }
