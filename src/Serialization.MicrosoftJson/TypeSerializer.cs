@@ -55,25 +55,12 @@
                 }
 
                 var propertyNameBytes = System.Text.Encoding.UTF8.GetBytes(mapping.PropertyName);
-                var fieldType = GetUnderlyingType(mapping.Field);
+                var fieldType = mapping.Field.GetUnderlyingType();
                 _setters.Add(propertyNameBytes, CreateSetter(getterMethods[fieldType], mapping.Field));
                 fieldMap.Add(mapping.PropertyName, mapping.Field);
             }
 
             _serializer = CreateSerializer(fieldMap, writerMethods);
-        }
-
-        private static Type GetUnderlyingType(FieldInfo field)
-        {
-            var underlyingType = Nullable.GetUnderlyingType(field.FieldType);
-
-            if (underlyingType is null)
-                underlyingType = field.FieldType;
-
-            if (underlyingType.IsEnum)
-                underlyingType = Enum.GetUnderlyingType(underlyingType);
-
-            return underlyingType;
         }
 
         private static Setter CreateSetter(MethodInfo methodInfo, FieldInfo fieldInfo)
@@ -130,7 +117,7 @@
                     il.Emit(OpCodes.Ldflda, map.Value);
                     var valueProperty = nullableType.GetRequiredProperty("Value");
                     il.Emit(OpCodes.Call, valueProperty.GetRequiredGetMethod());
-                    il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
+                    il.Emit(OpCodes.Callvirt, writerMethods[map.Value.GetUnderlyingType()]);
                     il.MarkLabel(skipIfNullableIsNull);
                 }
                 else
@@ -149,7 +136,7 @@
                     il.Emit(OpCodes.Ldstr, map.Key);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldfld, map.Value);
-                    il.Emit(OpCodes.Callvirt, writerMethods[GetUnderlyingType(map.Value)]);
+                    il.Emit(OpCodes.Callvirt, writerMethods[map.Value.GetUnderlyingType()]);
 
                     if (isClass)
                         il.MarkLabel(skipIfClassAndNull);
@@ -160,7 +147,7 @@
 
             il.Emit(OpCodes.Callvirt, writerType.GetRequiredMethod("WriteEndObject"));
             il.Emit(OpCodes.Ret);
-            return (Serializer)getter.CreateDelegate(typeof(Serializer));
+            return (Serializer) getter.CreateDelegate(typeof(Serializer));
         }
 
         public TValue Deserialize(ref Utf8JsonReader reader)
