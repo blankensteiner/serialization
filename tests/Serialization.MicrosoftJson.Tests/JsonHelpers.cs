@@ -87,7 +87,7 @@
             return GetProperty(jsonDocument, propertyName).GetDecimal();
         }
 
-        public static string GetString(byte[] bytes, string propertyName)
+        public static string? GetString(byte[] bytes, string propertyName)
         {
             using var jsonDocument = JsonDocument.Parse(bytes);
             return GetProperty(jsonDocument, propertyName).GetString();
