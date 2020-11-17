@@ -37,7 +37,7 @@
             if (serializer is null)
                 throw new Exception($"No serializer was found for the type '{typeof(TValue)}'");
 
-            return (ISerializer<TValue>)serializer;
+            return (ISerializer<TValue>) serializer;
         }
 
         public IEnumerable<object> GetAllSerializers() => _serializers.Values;

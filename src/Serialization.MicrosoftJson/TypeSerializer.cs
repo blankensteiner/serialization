@@ -18,10 +18,10 @@
         private readonly JsonSerializerOptions _serializerOptions;
         private readonly JsonWriterOptions _writerOptions;
         private readonly JsonReaderOptions _readerOptions;
-        private readonly ByteArrayKeyDictionary<Setter> _setters;
+        private readonly ByteArrayKeyDictionary<ReaderToFieldSetter> _setters;
         private readonly Serializer _serializer;
 
-        private delegate void Setter(ref Utf8JsonReader reader, TValue value);
+        private delegate void ReaderToFieldSetter(ref Utf8JsonReader reader, TValue value);
         private delegate void Serializer(Utf8JsonWriter writer, TValue value);
 
         public TypeSerializer(
@@ -37,7 +37,7 @@
             _writerOptions = writerOptions;
             _readerOptions = readerOptions;
 
-            _setters = new ByteArrayKeyDictionary<Setter>();
+            _setters = new ByteArrayKeyDictionary<ReaderToFieldSetter>();
             var fieldMap = new Dictionary<string, FieldInfo>();
 
             foreach (var mapping in configuration.Mappings)
@@ -48,7 +48,7 @@
                     var startIndex = name[0] == '_' ? 1 : 0;
                     name = char.ToUpper(name[startIndex]) + name.Substring(++startIndex); // Default to pascal casing
 
-                    if (serializerOptions.PropertyNamingPolicy != null)
+                    if (serializerOptions.PropertyNamingPolicy is not null)
                         name = serializerOptions.PropertyNamingPolicy.ConvertName(name);
 
                     mapping.PropertyName = name;
@@ -56,14 +56,14 @@
 
                 var propertyNameBytes = System.Text.Encoding.UTF8.GetBytes(mapping.PropertyName);
                 var fieldType = mapping.Field.GetUnderlyingType();
-                _setters.Add(propertyNameBytes, CreateSetter(getterMethods[fieldType], mapping.Field));
+                _setters.Add(propertyNameBytes, CreateReaderToFieldSetter(getterMethods[fieldType], mapping.Field));
                 fieldMap.Add(mapping.PropertyName, mapping.Field);
             }
 
             _serializer = CreateSerializer(fieldMap, writerMethods);
         }
 
-        private static Setter CreateSetter(MethodInfo methodInfo, FieldInfo fieldInfo)
+        private static ReaderToFieldSetter CreateReaderToFieldSetter(MethodInfo methodInfo, FieldInfo fieldInfo)
         {
             var valueType = typeof(TValue);
             var parameterTypes = new Type[] { typeof(Utf8JsonReader).MakeByRefType(), valueType };
@@ -75,7 +75,7 @@
             il.Emit(OpCodes.Call, methodInfo);
 
             var underlyingType = Nullable.GetUnderlyingType(fieldInfo.FieldType);
-            if (underlyingType != null)
+            if (underlyingType is not null)
             {
                 var nullableType = typeof(Nullable<>).MakeGenericType(underlyingType);
                 il.Emit(OpCodes.Newobj, nullableType.GetRequiredConstructor(new[] { underlyingType }));
@@ -84,7 +84,7 @@
             il.Emit(OpCodes.Stfld, fieldInfo);
             il.Emit(OpCodes.Ret);
 
-            return (Setter)dm.CreateDelegate(typeof(Setter));
+            return (ReaderToFieldSetter) dm.CreateDelegate(typeof(ReaderToFieldSetter));
         }
 
         private static Serializer CreateSerializer(Dictionary<string, FieldInfo> fieldMap, Dictionary<Type, MethodInfo> writerMethods)
@@ -93,8 +93,8 @@
             var valueType = typeof(TValue);
 
             var parameterTypes = new[] { writerType, valueType };
-            var getter = new DynamicMethod(valueType.Name + "Serializer", typeof(void), parameterTypes, valueType, true);
-            var il = getter.GetILGenerator();
+            var dm = new DynamicMethod(valueType.Name + "Serializer", typeof(void), parameterTypes, valueType, true);
+            var il = dm.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0);
 
             il.Emit(OpCodes.Callvirt, writerType.GetRequiredMethod("WriteStartObject"));
@@ -102,7 +102,7 @@
             foreach (var map in fieldMap)
             {
                 var underlyingType = Nullable.GetUnderlyingType(map.Value.FieldType);
-                if (underlyingType != null)
+                if (underlyingType is not null)
                 {
                     var skipIfNullableIsNull = il.DefineLabel();
                     il.Emit(OpCodes.Ldarg_1);
@@ -147,7 +147,7 @@
 
             il.Emit(OpCodes.Callvirt, writerType.GetRequiredMethod("WriteEndObject"));
             il.Emit(OpCodes.Ret);
-            return (Serializer) getter.CreateDelegate(typeof(Serializer));
+            return (Serializer) dm.CreateDelegate(typeof(Serializer));
         }
 
         public TValue Deserialize(ref Utf8JsonReader reader)
