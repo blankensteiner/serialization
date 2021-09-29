@@ -17,8 +17,11 @@
         }
 
         public static MethodInfo GetRequiredMethod(this Type type, string name)
+            => type.GetRequiredMethod(name, Type.EmptyTypes);
+
+        public static MethodInfo GetRequiredMethod(this Type type, string name, Type[] types)
         {
-            var methodInfo = type.GetMethod(name, Type.EmptyTypes);
+            var methodInfo = type.GetMethod(name, types);
 
             if (methodInfo is null)
                 throw new MissingMethodException(type.FullName, name);

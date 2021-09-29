@@ -1,4 +1,4 @@
-namespace Serialization.MicrosoftJson.Tests
+﻿namespace Serialization.MicrosoftJson.Tests
 {
     using FluentAssertions;
     using Serialization.Abstractions;
@@ -305,7 +305,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var bytes = Encoding.UTF8.GetBytes("{\"Value\": 255}");              // Arrange
             var actual = _serializer.Deserialize<ClosedClass<Int8Enum?>>(bytes); // Act
-            actual.Value.Should().Be(255);                                       // Assert
+            actual.Value.Should().Be(Int8Enum.Max);                              // Assert
         }
 
         [Fact]
@@ -465,7 +465,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<Int8Enum>(Int8Enum.Max); // Arrange
             var actual = Deserialize(expected);                   // Act
-            actual.Value.Should().Be((byte)expected.Value);       // Assert
+            actual.Value.Should().Be(expected.Value);             // Assert
         }
 
         [Fact]
@@ -473,7 +473,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<UInt8Enum>(UInt8Enum.Max); // Arrange
             var actual = Deserialize(expected);                     // Act
-            actual.Value.Should().Be((sbyte)expected.Value);        // Assert
+            actual.Value.Should().Be(expected.Value);               // Assert
         }
 
         [Fact]
@@ -481,7 +481,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<Int16Enum>(Int16Enum.Max); // Arrange
             var actual = Deserialize(expected);                     // Act
-            actual.Value.Should().Be((short)expected.Value);         // Assert
+            actual.Value.Should().Be(expected.Value);               // Assert
         }
 
         [Fact]
@@ -489,7 +489,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<UInt16Enum>(UInt16Enum.Max); // Arrange
             var actual = Deserialize(expected);                       // Act
-            actual.Value.Should().Be((ushort)expected.Value);         // Assert
+            actual.Value.Should().Be(expected.Value);                 // Assert
         }
 
         [Fact]
@@ -497,7 +497,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<Int32Enum>(Int32Enum.Max); // Arrange
             var actual = Deserialize(expected);                     // Act
-            actual.Value.Should().Be((int)expected.Value);          // Assert
+            actual.Value.Should().Be(expected.Value);               // Assert
         }
 
         [Fact]
@@ -505,7 +505,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<UInt32Enum>(UInt32Enum.Max); // Arrange
             var actual = Deserialize(expected);                       // Act
-            actual.Value.Should().Be((uint)expected.Value);           // Assert
+            actual.Value.Should().Be(expected.Value);                 // Assert
         }
 
         [Fact]
@@ -513,7 +513,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<Int64Enum>(Int64Enum.Max); // Arrange
             var actual = Deserialize(expected);                     // Act
-            actual.Value.Should().Be((long)expected.Value);         // Assert
+            actual.Value.Should().Be(expected.Value);               // Assert
         }
 
         [Fact]
@@ -521,7 +521,7 @@ namespace Serialization.MicrosoftJson.Tests
         {
             var expected = new OpenClass<UInt64Enum>(UInt64Enum.Max); // Arrange
             var actual = Deserialize(expected);                       // Act
-            actual.Value.Should().Be((ulong) expected.Value);         // Assert
+            actual.Value.Should().Be(expected.Value);                 // Assert
         }
 
         [Fact]
